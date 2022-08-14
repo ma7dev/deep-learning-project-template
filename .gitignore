@@ -1,0 +1,12 @@
+# ignore dev trash
+.hypothesis
+.pytest_cache
+.vscode
+.env
+**/__pycache__
+**/checkpoints
+lightning_logs
+# ignore large unnecessary files
+data/*
+notebooks/*
+output/*
