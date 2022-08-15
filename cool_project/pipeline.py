@@ -1,10 +1,12 @@
+from typing import Any, List
+
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 
 # import cool_project.optims as optims
 from torch.optim import Adam
-from torchmetrics import Accuracy
+from torchmetrics import Accuracy, F1Score, Precision, Recall
 
 from cool_project.models.baseline import Baseline
 
@@ -27,39 +29,46 @@ class LitModel(pl.LightningModule):
         self.criterion = F.nll_loss
         self.metrics = {
             "train": {
-                "acc": Accuracy(),
-                # 'acc': Accuracy(num_classes=self.num_classes, average='macro'),
-                # 'f1': F1Score(num_classes=self.num_classes, average='macro'),
-                # 'prec': Precision(num_classes=self.num_classes, average='macro'),
-                # 'rec': Recall(num_classes=self.num_classes, average='macro'),
+                "acc": Accuracy(num_classes=self.num_classes, average="macro"),
+                "f1": F1Score(num_classes=self.num_classes, average="macro"),
+                "prec": Precision(
+                    num_classes=self.num_classes, average="macro"
+                ),
+                "rec": Recall(num_classes=self.num_classes, average="macro"),
             },
             "val": {
-                "acc": Accuracy(),
-                # 'acc': Accuracy(num_classes=self.num_classes, average='macro'),
-                # 'f1': F1Score(num_classes=self.num_classes, average='macro'),
-                # 'prec': Precision(num_classes=self.num_classes, average='macro'),
-                # 'rec': Recall(num_classes=self.num_classes, average='macro'),
+                "acc": Accuracy(num_classes=self.num_classes, average="macro"),
+                "f1": F1Score(num_classes=self.num_classes, average="macro"),
+                "prec": Precision(
+                    num_classes=self.num_classes, average="macro"
+                ),
+                "rec": Recall(num_classes=self.num_classes, average="macro"),
             },
             "test": {
-                "acc": Accuracy(),
-                # 'acc': Accuracy(num_classes=self.num_classes, average='macro'),
-                # 'f1': F1Score(num_classes=self.num_classes, average='macro'),
-                # 'prec': Precision(num_classes=self.num_classes, average='macro'),
-                # 'rec': Recall(num_classes=self.num_classes, average='macro'),
+                "acc": Accuracy(num_classes=self.num_classes, average="macro"),
+                "f1": F1Score(num_classes=self.num_classes, average="macro"),
+                "prec": Precision(
+                    num_classes=self.num_classes, average="macro"
+                ),
+                "rec": Recall(num_classes=self.num_classes, average="macro"),
             },
         }
 
         self.automatic_optimization = False
 
-    def configure_optimizers(self):
+    def configure_optimizers(
+        self: pl.LightningModule,
+    ) -> torch.optim.Optimizer:
         optimizer = Adam(self.parameters(), **self.optimizer_config.kwargs)
         return optimizer
 
-    def forward(self, x):
+    def forward(self: pl.LightningModule, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
     # logging
-    def logging_step(self, loss, acc, mode):
+    def logging_step(
+        self: pl.LightningModule, loss: dict, acc: dict, mode: str
+    ) -> None:
         self.log(f"{mode}/step/loss", loss, on_step=True, rank_zero_only=True)
         for metric_name, ac in acc.items():
             self.log(
@@ -69,8 +78,12 @@ class LitModel(pl.LightningModule):
                 rank_zero_only=True,
             )
 
-    def logging_epoch(self, outputs, mode):
-        loss = torch.stack([x["loss"].detach() for x in outputs]).mean()
+    def logging_epoch(
+        self: pl.LightningModule, epoch_outputs: dict, mode: str
+    ) -> None:
+
+        loss = torch.stack([x["loss"].detach() for x in epoch_outputs]).mean()
+
         self.log(
             f"{mode}/epoch/loss",
             loss,
@@ -79,22 +92,23 @@ class LitModel(pl.LightningModule):
             rank_zero_only=True,
         )
         for metric_name in self.metrics[mode].keys():
-            try:
-                acc = self.metrics[mode][metric_name].compute()
-                self.log(
-                    f"{mode}/epoch/{metric_name}",
-                    acc,
-                    on_epoch=True,
-                    prog_bar=True,
-                    rank_zero_only=True,
-                )
-                self.metrics[mode][metric_name].reset()
-            except Exception as e:
-                print(e)
-                __import__("pdb").set_trace()
+            acc = self.metrics[mode][metric_name].compute()
+            self.log(
+                f"{mode}/epoch/{metric_name}",
+                acc,
+                on_epoch=True,
+                prog_bar=True,
+                rank_zero_only=True,
+            )
+            self.metrics[mode][metric_name].reset()
 
     # compute
-    def compute_metrics(self, preds, targets, mode):
+    def compute_metrics(
+        self: pl.LightningModule,
+        preds: torch.Tensor,
+        targets: torch.Tensor,
+        mode: str,
+    ) -> dict:
         preds = preds.detach().cpu().int()
         targets = targets.detach().cpu().int()
 
@@ -103,7 +117,9 @@ class LitModel(pl.LightningModule):
             acc[metric_name] = self.metrics[mode][metric_name](preds, targets)
         return acc
 
-    def _step(self, batch, batch_idx, mode=None):
+    def _step(
+        self: pl.LightningModule, batch: List[Any], batch_idx: int, mode: str
+    ) -> dict:
         if mode == "train":
             optimizer = self.optimizers()
             images, targets = batch
@@ -117,6 +133,8 @@ class LitModel(pl.LightningModule):
 
         else:
             images, targets = batch
+            outputs = 0
+            loss = 0
             with torch.no_grad():
                 outputs = self(images)
                 loss = self.criterion(outputs, targets)
@@ -129,48 +147,67 @@ class LitModel(pl.LightningModule):
             "targets": targets.clone().detach(),
         }
 
-    def training_step(self, batch, batch_idx):
+    def training_step(
+        self: pl.LightningModule, batch: List[Any], batch_idx: int
+    ) -> dict:
         return self._step(batch, batch_idx, "train")
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(
+        self: pl.LightningModule, batch: List[Any], batch_idx: int
+    ) -> dict:
         return self._step(batch, batch_idx, "val")
 
-    def test_step(self, batch, batch_idx):
+    def test_step(
+        self: pl.LightningModule, batch: List[Any], batch_idx: int
+    ) -> dict:
         return self._step(batch, batch_idx, "test")
 
-    def _end_step(self, step_outputs, mode=None):
+    def _step_end(
+        self: pl.LightningModule, step_outputs: dict, mode: str
+    ) -> None:
         loss = step_outputs["loss"].detach()
         acc = self.compute_metrics(
             step_outputs["preds"], step_outputs["targets"], mode
         )
         self.logging_step(loss, acc, mode)
 
-    def training_end_step(self, step_outputs):
-        return self._end_step(step_outputs, "train")
+    def training_step_end(
+        self: pl.LightningModule, step_outputs: dict
+    ) -> None:
+        self._step_end(step_outputs, "train")
 
-    def validation_end_step(self, step_outputs):
-        return self._end_step(step_outputs, "val")
+    def validation_step_end(
+        self: pl.LightningModule, step_outputs: dict
+    ) -> None:
+        self._step_end(step_outputs, "val")
 
-    def test_end_step(self, step_outputs):
-        return self._end_step(step_outputs, "test")
+    def test_step_end(self: pl.LightningModule, step_outputs: dict) -> None:
+        self._step_end(step_outputs, "test")
 
     # _epoch_end
-    def _epoch_end(self, epoch_outputs, mode):
+    def _epoch_end(
+        self: pl.LightningModule, epoch_outputs: dict, mode: str
+    ) -> None:
         # if mode == 'train':
         #     lr_scheduler = self.lr_schedulers()
         #     lr_scheduler.step()
         self.logging_epoch(epoch_outputs, mode)
-        # pass
 
-    def training_epoch_end(self, epoch_outputs):
+    def training_epoch_end(
+        self: pl.LightningModule, epoch_outputs: dict
+    ) -> None:
         self._epoch_end(epoch_outputs, "train")
 
-    def validation_epoch_end(self, epoch_outputs):
+    def validation_epoch_end(
+        self: pl.LightningModule, epoch_outputs: dict
+    ) -> None:
         self._epoch_end(epoch_outputs, "val")
 
-    def test_epoch_end(self, epoch_outputs):
+    def test_epoch_end(self: pl.LightningModule, epoch_outputs: dict) -> None:
         self._epoch_end(epoch_outputs, "test")
 
-    def predict_step(self, images):
+    def predict_step(
+        self: pl.LightningModule, images: torch.Tensor
+    ) -> torch.Tensor:
         outputs = self.forward(images)
         return outputs

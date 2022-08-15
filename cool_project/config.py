@@ -16,7 +16,8 @@ from pydantic import (
     StrictBool,
     ValidationError,
 )
-from pytorch_lightning.callbacks import TQDMProgressBar
+from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
+from pytorch_lightning.loggers import WandbLogger
 
 import cool_project
 
@@ -49,9 +50,9 @@ def create_log_dir(output_path, exp_path, today):
     if not os.path.exists(exp_path):
         os.makedirs(exp_path)
         os.makedirs(f"{exp_path}/ckpts")
-        # os.makedirs(f"{exp_path}/optims")
+        os.makedirs(f"{exp_path}/optims")
         os.makedirs(f"{exp_path}/figs")
-        # os.makedirs(f"{exp_path}/logs")
+        os.makedirs(f"{exp_path}/logs")
     else:
         raise Exception(f"Experiment path {exp_path} already exists")
 
@@ -66,11 +67,12 @@ def exp(output_path, exp_name):
 
 def get_transform(is_train: bool = False) -> T.Compose:
     transform = []
-    # if mode == "train":
-    #     transform.extend([
-    #         T.RandomCrop(32, padding=4),
-    #         T.RandomHorizontalFlip(),
-    #     ])
+    if is_train:
+        transform.extend(
+            [
+                T.RandomRotation(5),
+            ]
+        )
     transform.extend(
         [
             T.ToTensor(),
@@ -116,12 +118,13 @@ class ExperimentConfig(BaseModel):
 class TrainerConfig(BaseModel):
     devices: Optional[PositiveInt] = [0]
     fast_dev_run: StrictBool = False
-    # overfit_batches: PositiveFloat = 0.0
+    overfit_batches: PositiveFloat = 0.0
     max_epochs: PositiveInt = 10
     accelerator: str = "gpu"
-    # val_check_interval: PositiveInt = 2
+    num_sanity_val_steps: PositiveInt = 0
+    # val_check_interval: PositiveFloat = 1.0
     check_val_every_n_epoch: PositiveInt = 1
-    # accumulate_grad_batches: PositiveInt = 1
+    accumulate_grad_batches: PositiveInt = 1
     log_every_n_steps: PositiveInt = 10
     callbacks: List[str] = []
     logger: List[str] = []
@@ -141,11 +144,30 @@ def get_callbacks(config, callbacks_dict: Dict = {}) -> List[Any]:
     callbacks = []
     # if 'tqdm' in callbacks_dict:
     callbacks.append(TQDMProgressBar(refresh_rate=10))
-    # callbacks.append(ModelCheckpoint(
-    #     dirpath=f"{config.experiment_config.exp_path}/ckpts",
-    #     monitor='val/epoch/loss',
-    # ))
+    callbacks.append(
+        ModelCheckpoint(
+            dirpath=f"{config.experiment_config.exp_path}/ckpts",
+            monitor="val/epoch/loss",
+        )
+    )
     return callbacks
+
+
+def get_logger(config, logger_dict: Dict = {}) -> List[Any]:
+    logger = []
+    # if 'tqdm' in callbacks_dict:
+    logger.append(
+        WandbLogger(
+            project=config.project_name,
+            name=config.experiment_config.run_name,
+            save_dir=config.experiment_config.output_path,
+        )
+    )
+    # logger.append(TensorBoardLogger(
+    #     save_dir=f"{config.experiment_config.output_path}/tb_logs",
+    #     name=config.experiment_config.run_name,
+    # ))
+    return logger
 
 
 def create_config(config_path, verbose=False):
@@ -159,8 +181,10 @@ def create_config(config_path, verbose=False):
 
         config = Config(**config_dict)
 
-        config.experiment_config.exp_path,
-        config.experiment_config.run_name = exp(
+        (
+            config.experiment_config.exp_path,
+            config.experiment_config.run_name,
+        ) = exp(
             config.experiment_config.output_path,
             config.experiment_config.exp_name,
         )
@@ -168,6 +192,10 @@ def create_config(config_path, verbose=False):
         config.trainer_config.callbacks = get_callbacks(
             config,
             # config_dict['callbacks']
+        )
+        config.trainer_config.logger = get_logger(
+            config,
+            # config_dict['logger']
         )
     except ValidationError as e:
         print(e.json())

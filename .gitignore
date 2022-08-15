@@ -6,6 +6,8 @@
 **/__pycache__
 **/checkpoints
 lightning_logs
+poetry.lock
+
 # ignore large unnecessary files
 data/*
 notebooks/*
