@@ -38,7 +38,13 @@ strict = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 # ignore_missing_imports = true
 exclude = "(/tests/)|(/docs/)|(/examples/)"
-generated-members=["numpy.*","torch.*","torchvision.*","pytorch_lightning.*"]
+# generated-members=["numpy.*","torch.*","torchvision.*","pytorch_lightning.*"]
+ignore_missing_imports = true
+
+# https://github.com/konradhalas/dacite/issues/133
+[[tool.mypy.overrides]]
+module = "pytorch_lightning.*"
+implicit_reexport = true
 
 [tool.pytest.ini_options]
 # log_cli = true

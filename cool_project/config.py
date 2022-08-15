@@ -140,7 +140,7 @@ class Config(BaseModel):
 def get_callbacks(
     config: Config, callbacks_dict: Dict[Any, Any] = {}
 ) -> List[Any]:
-    callbacks = []
+    callbacks: List[Any] = []
     # if 'tqdm' in callbacks_dict:
     callbacks.append(TQDMProgressBar(refresh_rate=10))
     callbacks.append(
@@ -153,7 +153,7 @@ def get_callbacks(
 
 
 def get_logger(config: Config, logger_dict: Dict[Any, Any] = {}) -> List[Any]:
-    logger = []
+    logger: List[Any] = []
     # if 'tqdm' in callbacks_dict:
     logger.append(
         WandbLogger(
