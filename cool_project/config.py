@@ -3,7 +3,7 @@ import random
 import string
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import torchvision.transforms as T
 import yaml
@@ -113,7 +113,7 @@ class ExperimentConfig(BaseModel):
 
 
 class TrainerConfig(BaseModel):
-    devices: Optional[PositiveInt] = [0]
+    devices: List[PositiveInt] = [0]
     fast_dev_run: StrictBool = False
     overfit_batches: PositiveFloat = 0.0
     max_epochs: PositiveInt = 10
@@ -137,7 +137,9 @@ class Config(BaseModel):
     trainer_config: TrainerConfig = TrainerConfig()
 
 
-def get_callbacks(config: Config, callbacks_dict: Dict = {}) -> List[Any]:
+def get_callbacks(
+    config: Config, callbacks_dict: Dict[Any, Any] = {}
+) -> List[Any]:
     callbacks = []
     # if 'tqdm' in callbacks_dict:
     callbacks.append(TQDMProgressBar(refresh_rate=10))
@@ -150,7 +152,7 @@ def get_callbacks(config: Config, callbacks_dict: Dict = {}) -> List[Any]:
     return callbacks
 
 
-def get_logger(config: Config, logger_dict: Dict = {}) -> List[Any]:
+def get_logger(config: Config, logger_dict: Dict[Any, Any] = {}) -> List[Any]:
     logger = []
     # if 'tqdm' in callbacks_dict:
     logger.append(
@@ -167,7 +169,7 @@ def get_logger(config: Config, logger_dict: Dict = {}) -> List[Any]:
     return logger
 
 
-def create_config(config_path: str, verbose: bool = False):
+def create_config(config_path: str, verbose: bool = False) -> Config:
     try:
         with open(Path(config_path), "r") as f:
             config_dict = yaml.load(f, Loader=yaml.Loader)

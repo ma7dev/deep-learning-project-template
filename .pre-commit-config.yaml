@@ -43,6 +43,6 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        files: ^cool_project/
+        files: cool_project/
         exclude: (/tests/)
         args: ["--ignore-missing-imports"]

@@ -10,7 +10,7 @@ class Baseline(nn.Module):
         hidden_size: int = 256,
         num_classes: int = 10,
     ) -> None:
-        super().__init__()
+        super(Baseline, self).__init__()
         self.model = nn.Sequential(
             nn.Flatten(),
             nn.Linear(in_channels, hidden_size),

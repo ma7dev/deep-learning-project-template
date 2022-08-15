@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, Dict, List
 
 import pytorch_lightning as pl
 import torch
@@ -14,9 +14,9 @@ from cool_project.models.baseline import Baseline
 class LitModel(pl.LightningModule):
     def __init__(
         self: pl.LightningModule,
-        model_config: dict = None,
-        optimizer_config: dict = None,
-        lr_config: dict = None,
+        model_config: Any,
+        optimizer_config: Any,
+        lr_config: Any,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
@@ -67,7 +67,10 @@ class LitModel(pl.LightningModule):
 
     # logging
     def logging_step(
-        self: pl.LightningModule, loss: dict, acc: dict, mode: str
+        self: pl.LightningModule,
+        loss: Dict[Any, Any],
+        acc: Dict[Any, Any],
+        mode: str,
     ) -> None:
         self.log(f"{mode}/step/loss", loss, on_step=True, rank_zero_only=True)
         for metric_name, ac in acc.items():
@@ -79,7 +82,7 @@ class LitModel(pl.LightningModule):
             )
 
     def logging_epoch(
-        self: pl.LightningModule, epoch_outputs: dict, mode: str
+        self: pl.LightningModule, epoch_outputs: Dict[Any, Any], mode: str
     ) -> None:
 
         loss = torch.stack([x["loss"].detach() for x in epoch_outputs]).mean()
@@ -108,7 +111,7 @@ class LitModel(pl.LightningModule):
         preds: torch.Tensor,
         targets: torch.Tensor,
         mode: str,
-    ) -> dict:
+    ) -> Dict[Any, Any]:
         preds = preds.detach().cpu().int()
         targets = targets.detach().cpu().int()
 
@@ -119,7 +122,7 @@ class LitModel(pl.LightningModule):
 
     def _step(
         self: pl.LightningModule, batch: List[Any], batch_idx: int, mode: str
-    ) -> dict:
+    ) -> Dict[Any, Any]:
         if mode == "train":
             optimizer = self.optimizers()
             images, targets = batch
@@ -149,21 +152,21 @@ class LitModel(pl.LightningModule):
 
     def training_step(
         self: pl.LightningModule, batch: List[Any], batch_idx: int
-    ) -> dict:
+    ) -> Dict[Any, Any]:
         return self._step(batch, batch_idx, "train")
 
     def validation_step(
         self: pl.LightningModule, batch: List[Any], batch_idx: int
-    ) -> dict:
+    ) -> Dict[Any, Any]:
         return self._step(batch, batch_idx, "val")
 
     def test_step(
         self: pl.LightningModule, batch: List[Any], batch_idx: int
-    ) -> dict:
+    ) -> Dict[Any, Any]:
         return self._step(batch, batch_idx, "test")
 
     def _step_end(
-        self: pl.LightningModule, step_outputs: dict, mode: str
+        self: pl.LightningModule, step_outputs: Dict[Any, Any], mode: str
     ) -> None:
         loss = step_outputs["loss"].detach()
         acc = self.compute_metrics(
@@ -172,21 +175,23 @@ class LitModel(pl.LightningModule):
         self.logging_step(loss, acc, mode)
 
     def training_step_end(
-        self: pl.LightningModule, step_outputs: dict
+        self: pl.LightningModule, step_outputs: Dict[Any, Any]
     ) -> None:
         self._step_end(step_outputs, "train")
 
     def validation_step_end(
-        self: pl.LightningModule, step_outputs: dict
+        self: pl.LightningModule, step_outputs: Dict[Any, Any]
     ) -> None:
         self._step_end(step_outputs, "val")
 
-    def test_step_end(self: pl.LightningModule, step_outputs: dict) -> None:
+    def test_step_end(
+        self: pl.LightningModule, step_outputs: Dict[Any, Any]
+    ) -> None:
         self._step_end(step_outputs, "test")
 
     # _epoch_end
     def _epoch_end(
-        self: pl.LightningModule, epoch_outputs: dict, mode: str
+        self: pl.LightningModule, epoch_outputs: Dict[Any, Any], mode: str
     ) -> None:
         # if mode == 'train':
         #     lr_scheduler = self.lr_schedulers()
@@ -194,16 +199,18 @@ class LitModel(pl.LightningModule):
         self.logging_epoch(epoch_outputs, mode)
 
     def training_epoch_end(
-        self: pl.LightningModule, epoch_outputs: dict
+        self: pl.LightningModule, epoch_outputs: Dict[Any, Any]
     ) -> None:
         self._epoch_end(epoch_outputs, "train")
 
     def validation_epoch_end(
-        self: pl.LightningModule, epoch_outputs: dict
+        self: pl.LightningModule, epoch_outputs: Dict[Any, Any]
     ) -> None:
         self._epoch_end(epoch_outputs, "val")
 
-    def test_epoch_end(self: pl.LightningModule, epoch_outputs: dict) -> None:
+    def test_epoch_end(
+        self: pl.LightningModule, epoch_outputs: Dict[Any, Any]
+    ) -> None:
         self._epoch_end(epoch_outputs, "test")
 
     def predict_step(
