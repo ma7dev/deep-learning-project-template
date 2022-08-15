@@ -1,0 +1,35 @@
+name: Linting
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  lint:
+    name: Lint everything
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7.13"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install poetry
+        poetry install
+    - name: Check with black
+      run: poetry run black --check cool_project/
+    - name: Check with pycln
+      run: poetry run pycln --check cool_project/
+    - name: Check with isort
+      run: poetry run isort --check cool_project/
+    - name: Mypy analysis
+      run: poetry run mypy cool_project/

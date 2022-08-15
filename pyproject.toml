@@ -39,7 +39,7 @@ enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 # ignore_missing_imports = true
 exclude = "(/tests/)|(/docs/)|(/examples/)"
 
-[tool.pytest]
+[tool.pytest.ini_options]
 # log_cli = true
 addopts = [
     # show summary of all tests that did not pass
@@ -49,7 +49,7 @@ addopts = [
     # Make tracebacks shorter
     "--tb=native",
     # enable all warnings
-    "-Wd",
+    # "-Wd",
 ]
 testpaths = ["tests"]
 filterwarnings = ["ignore::DeprecationWarning"]

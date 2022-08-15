@@ -3,7 +3,7 @@ import random
 import string
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import torchvision.transforms as T
 import yaml
@@ -27,11 +27,9 @@ PROJECT_PATH = str(
 load_dotenv(f"{PROJECT_PATH}/.env")
 
 
-def collate_fn(batch):
-    return tuple(zip(*batch))
-
-
-def get_exp_path_and_run_name(output_path, exp_name):
+def get_exp_path_and_run_name(
+    output_path: str, exp_name: str
+) -> Tuple[str, str, str]:
     random_str = "".join(
         random.choices(string.ascii_uppercase + string.digits, k=5)
     )
@@ -42,7 +40,7 @@ def get_exp_path_and_run_name(output_path, exp_name):
     return exp_path, run_name, today
 
 
-def create_log_dir(output_path, exp_path, today):
+def create_log_dir(output_path: str, exp_path: str, today: str) -> None:
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     if not os.path.exists(f"{output_path}/{today}"):
@@ -57,7 +55,7 @@ def create_log_dir(output_path, exp_path, today):
         raise Exception(f"Experiment path {exp_path} already exists")
 
 
-def exp(output_path, exp_name):
+def exp(output_path: str, exp_name: str) -> Tuple[str, str]:
     exp_path, run_name, today = get_exp_path_and_run_name(
         output_path, exp_name
     )
@@ -140,7 +138,7 @@ class Config(BaseModel):
     trainer_config: TrainerConfig = TrainerConfig()
 
 
-def get_callbacks(config, callbacks_dict: Dict = {}) -> List[Any]:
+def get_callbacks(config: Config, callbacks_dict: Dict = {}) -> List[Any]:
     callbacks = []
     # if 'tqdm' in callbacks_dict:
     callbacks.append(TQDMProgressBar(refresh_rate=10))
@@ -153,7 +151,7 @@ def get_callbacks(config, callbacks_dict: Dict = {}) -> List[Any]:
     return callbacks
 
 
-def get_logger(config, logger_dict: Dict = {}) -> List[Any]:
+def get_logger(config: Config, logger_dict: Dict = {}) -> List[Any]:
     logger = []
     # if 'tqdm' in callbacks_dict:
     logger.append(
@@ -170,8 +168,7 @@ def get_logger(config, logger_dict: Dict = {}) -> List[Any]:
     return logger
 
 
-def create_config(config_path, verbose=False):
-    output_path = f"{PROJECT_PATH}/output"
+def create_config(config_path: str, verbose: bool = False):
     try:
         with open(Path(config_path), "r") as f:
             config_dict = yaml.load(f, Loader=yaml.Loader)

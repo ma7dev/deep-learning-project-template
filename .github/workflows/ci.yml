@@ -1,0 +1,33 @@
+name: CI Workflow
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  build:
+    name: CI Workflow
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7.13"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Setup dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install poetry
+        poetry install
+    - name: Run tests
+      run: |
+          poetry run pytest
+    - name: Build wheels
+      run: |
+          poetry build
