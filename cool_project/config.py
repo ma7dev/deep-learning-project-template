@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Tuple
 
 import torchvision.transforms as T
 import yaml
+from devtools import debug
 from loguru import logger
 from pydantic import (
     BaseModel,
@@ -16,14 +17,13 @@ from pydantic import (
     ValidationError,
 )
 from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 import cool_project
 
 PROJECT_PATH = str(
     Path(os.path.dirname(cool_project.__file__)).parent.absolute()
 )
-# load_dotenv(f"{PROJECT_PATH}/.env")
 
 
 def get_exp_path_and_run_name(
@@ -119,7 +119,6 @@ class TrainerConfig(BaseModel):
     max_epochs: PositiveInt = 10
     accelerator: str = "gpu"
     num_sanity_val_steps: PositiveInt = 0
-    # val_check_interval: PositiveFloat = 1.0
     check_val_every_n_epoch: PositiveInt = 1
     accumulate_grad_batches: PositiveInt = 1
     log_every_n_steps: PositiveInt = 10
@@ -141,31 +140,43 @@ def get_callbacks(
     config: Config, callbacks_dict: Dict[Any, Any] = {}
 ) -> List[Any]:
     callbacks: List[Any] = []
-    # if 'tqdm' in callbacks_dict:
-    callbacks.append(TQDMProgressBar(refresh_rate=10))
-    callbacks.append(
-        ModelCheckpoint(
-            dirpath=f"{config.experiment_config.exp_path}/ckpts",
-            monitor="val/epoch/loss",
+    if "tqdm" in callbacks_dict and callbacks_dict["tqdm"]:
+        callbacks.append(
+            TQDMProgressBar(
+                refresh_rate=callbacks_dict["tqdm"]["refresh_rate"]
+                if "refresh_rate" in callbacks_dict["tqdm"]
+                else 10
+            )
         )
-    )
+    if "checkpoint" in callbacks_dict and callbacks_dict["checkpoint"]:
+        callbacks.append(
+            ModelCheckpoint(
+                dirpath=f"{config.experiment_config.exp_path}/ckpts",
+                monitor=callbacks_dict["checkpoint"]["monitor"]
+                if "monitor" in callbacks_dict["checkpoint"]
+                else "val/epoch/loss",
+            )
+        )
     return callbacks
 
 
 def get_logger(config: Config, logger_dict: Dict[Any, Any] = {}) -> List[Any]:
     logger: List[Any] = []
-    # if 'tqdm' in callbacks_dict:
-    logger.append(
-        WandbLogger(
-            project=config.project_name,
-            name=config.experiment_config.run_name,
-            save_dir=config.experiment_config.output_path,
+    if "wandb" in logger_dict and logger_dict["wandb"]:
+        logger.append(
+            WandbLogger(
+                project=config.project_name,
+                name=config.experiment_config.run_name,
+                save_dir=config.experiment_config.output_path,
+            )
         )
-    )
-    # logger.append(TensorBoardLogger(
-    #     save_dir=f"{config.experiment_config.output_path}/tb_logs",
-    #     name=config.experiment_config.run_name,
-    # ))
+    if "tensorboard" in logger_dict and logger_dict["tensorboard"]:
+        logger.append(
+            TensorBoardLogger(
+                save_dir=f"{config.experiment_config.output_path}/tb_logs",
+                name=config.experiment_config.run_name,
+            )
+        )
     return logger
 
 
@@ -186,20 +197,28 @@ def create_config(config_path: str, verbose: bool = False) -> Config:
             config.experiment_config.output_path,
             config.experiment_config.exp_name,
         )
-        # if "callbacks" in config_dict:
-        config.trainer_config.callbacks = get_callbacks(
-            config,
-            # config_dict['callbacks']
-        )
-        config.trainer_config.logger = get_logger(
-            config,
-            # config_dict['logger']
-        )
+        if "callbacks" in config_dict:
+            config.trainer_config.callbacks = get_callbacks(
+                config, config_dict["callbacks"]
+            )
+        if "logger" in config_dict:
+            config.trainer_config.logger = get_logger(
+                config, config_dict["logger"]
+            )
     except ValidationError as e:
-        print(e.json())
-        exit()
+        raise Exception(f"Invalid config: {e}") from e
 
     if verbose:
-        logger.info(config)
+        logger.info("verbose")
+        debug(f"config_path: {config_path}")
+        debug(config_dict)
+        debug(config)
 
+    logger.info("logging into file")
+    with open(
+        f"{config.experiment_config.exp_path}/logs/config.log", "w"
+    ) as f:
+        yaml.dump(f"config_path: {config_path}")
+        yaml.dump(config_dict, f)
+        yaml.dump(config.dict(), f)
     return config

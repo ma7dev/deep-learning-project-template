@@ -3,11 +3,9 @@ from typing import Any, Dict, List
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-
-# import cool_project.optims as optims
-from torch.optim import Adam
 from torchmetrics import Accuracy, F1Score, Precision, Recall
 
+import cool_project.optims as optims
 from cool_project.models.baseline import Baseline
 
 
@@ -59,7 +57,9 @@ class LitModel(pl.LightningModule):
     def configure_optimizers(
         self: pl.LightningModule,
     ) -> torch.optim.Optimizer:
-        optimizer = Adam(self.parameters(), **self.optimizer_config.kwargs)
+        optimizer = vars(optims)[self.optimizer_config.cls](
+            self.parameters(), **self.optimizer_config.kwargs
+        )
         return optimizer
 
     def forward(self: pl.LightningModule, x: torch.Tensor) -> torch.Tensor:
