@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 
 import torch
-from dotenv import load_dotenv
 from loguru import logger
 from pytorch_lightning import Trainer
 
@@ -17,7 +16,6 @@ from cool_project.pipeline import LitModel
 PROJECT_PATH = str(
     Path(os.path.dirname(cool_project.__file__)).parent.absolute()
 )
-load_dotenv(f"{PROJECT_PATH}/.env")
 CONFIG_PATH = f"{PROJECT_PATH}/configs"
 
 if __name__ == "__main__":

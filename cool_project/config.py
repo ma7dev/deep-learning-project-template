@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torchvision.transforms as T
 import yaml
-from dotenv import load_dotenv
 from loguru import logger
 from pydantic import (
     BaseModel,
@@ -24,7 +23,7 @@ import cool_project
 PROJECT_PATH = str(
     Path(os.path.dirname(cool_project.__file__)).parent.absolute()
 )
-load_dotenv(f"{PROJECT_PATH}/.env")
+# load_dotenv(f"{PROJECT_PATH}/.env")
 
 
 def get_exp_path_and_run_name(
@@ -129,7 +128,7 @@ class TrainerConfig(BaseModel):
 
 
 class Config(BaseModel):
-    project_name: str = os.environ["PROJECT_NAME"]
+    project_name: str = "cifar10_experiments"
     dataset_config: DatasetConfig = DatasetConfig()
     model_config: ModelConfig = ModelConfig()
     optimizer_config: OptimizerConfig = OptimizerConfig()
