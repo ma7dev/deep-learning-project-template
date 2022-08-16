@@ -13,3 +13,7 @@ poetry.lock
 data/*
 notebooks/*
 output/*
+
+
+# keep folders that contain .gitkeep
+!**/.gitkeep
