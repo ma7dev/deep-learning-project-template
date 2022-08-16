@@ -72,11 +72,18 @@ class LitModel(pl.LightningModule):
         acc: Dict[Any, Any],
         mode: str,
     ) -> None:
-        self.log(f"{mode}/step/loss", loss, on_step=True, rank_zero_only=True)
+        self.log(
+            f"{mode}/step/loss",
+            loss,
+            on_epoch=False,
+            on_step=True,
+            rank_zero_only=True,
+        )
         for metric_name, ac in acc.items():
             self.log(
                 f"{mode}/step/{metric_name}",
                 ac,
+                on_epoch=False,
                 on_step=True,
                 rank_zero_only=True,
             )
@@ -90,6 +97,7 @@ class LitModel(pl.LightningModule):
         self.log(
             f"{mode}/epoch/loss",
             loss,
+            on_step=False,
             on_epoch=True,
             prog_bar=True,
             rank_zero_only=True,
@@ -99,6 +107,7 @@ class LitModel(pl.LightningModule):
             self.log(
                 f"{mode}/epoch/{metric_name}",
                 acc,
+                on_step=False,
                 on_epoch=True,
                 prog_bar=True,
                 rank_zero_only=True,

@@ -14,5 +14,5 @@ callbacks:
   checkpoint:
     monitor: val/epoch/loss
 
-# logger:
-  # wandb: True
+logger:
+  wandb: True
